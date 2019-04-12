@@ -1,0 +1,6 @@
+source 'https://rubygems.org'
+
+gem 'sinatra', '~> 2'
+gem 'rack', '~> 2'
+gem 'rack-contrib', '~> 2'
+gem 'aws-record', '~> 2'

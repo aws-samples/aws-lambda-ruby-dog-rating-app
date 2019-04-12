@@ -1,0 +1,29 @@
+<!DOCTYPE HTML>
+<html lang = "en">
+  <head>
+    <title>Puppies!</title>
+    <meta charset = "UTF-8" />
+  </head>
+  <body>
+    <h1>PUPPIES!</h1>
+    <a href="/Prod/add">Add a New Dog</a>
+    <% @dogs.each do |dog| %>
+      <div>
+        <h3>Look at this dog!</h3>
+        <img src="<%= dog.image_url %>"></img>
+        <p>Rating: <%= dog.score %>/10!</p>
+        <form action="/Prod/rate/<%= dog.object_id %>" method="post">
+          <select id="rating" name="rating">
+            <option selected>10</option>
+            <option>11</option>
+            <option>12</option>
+            <option>13</option>
+            <option>14</option>
+            <option>15</option>
+          </select>
+          <button type="submit">Rate!</button>
+        </form>
+      </div>
+    <% end %>
+  </body>
+</html>

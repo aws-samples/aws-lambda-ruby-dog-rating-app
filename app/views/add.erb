@@ -1,0 +1,18 @@
+<!DOCTYPE HTML>
+<html lang = "en">
+  <head>
+    <title>Add a puppy!</title>
+    <meta charset = "UTF-8" />
+  </head>
+  <body>
+    <a href="/Prod/">Back to the puppies!</a>
+    <form action="<%= @presigned_post.url %>" method="post" enctype="multipart/form-data">
+      <% @presigned_post.fields.each do |n, v| %>
+        <input type="hidden" name="<%= n %>" value="<%= v %>" />
+      <% end %>
+      File:
+      <input type="file"   name="file" /> <br />
+      <input type="submit" name="submit" value="Upload!" />
+    </form>
+  </body>
+</html>

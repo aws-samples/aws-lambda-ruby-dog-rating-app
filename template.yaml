@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+    aws-lambda-ruby-dog-rating-app
+
+    Sample SAM Template for dog-rates
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 5
+
+Parameters:
+  AppBucketName:
+    Type: String
+    Description: "REQUIRED: Unique S3 bucket name to use for the app."
+  DynamoDBTableName:
+    Type: String
+    Description: "Table name to use for Amazon DynamoDB."
+    Default: RateDogsTable
+Resources:
+  AppBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref AppBucketName
+  S3UploadHookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      Handler: event.obj_upload
+      Runtime: ruby2.5
+      Environment:
+        Variables:
+          BucketName: !Ref AppBucketName
+          TableName: !Ref RateDogsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RateDogsTable
+        - S3CrudPolicy:
+            BucketName: !Ref AppBucketName
+        - RekognitionDetectOnlyPolicy: {}
+      Events:
+        ObjectCreatedHook:
+          Type: S3
+          Properties:
+            Bucket: !Ref AppBucket
+            Events: s3:ObjectCreated:*
+  S3DeleteHookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      Handler: event.obj_deleted
+      Runtime: ruby2.5
+      Environment:
+        Variables:
+          BucketName: !Ref AppBucketName
+          TableName: !Ref RateDogsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RateDogsTable
+      Events:
+        ObjectDeletedHook:
+          Type: S3
+          Properties:
+            Bucket: !Ref AppBucket
+            Events: s3:ObjectRemoved:*
+  SinatraFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: lambda.handler
+      Runtime: ruby2.5
+      Environment:
+        Variables:
+          BucketName: !Ref AppBucket
+          TableName: !Ref RateDogsTable
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref AppBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RateDogsTable
+      CodeUri: app/
+      MemorySize: 512
+      Events:
+        SinatraApi:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+            RestApiId: !Ref SinatraAPI
+  SinatraAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: SinatraAPI
+      StageName: Prod
+      DefinitionBody:
+        swagger: '2.0'
+        basePath: '/Prod'
+        info:
+          title: !Ref AWS::StackName
+        paths:
+          /{proxy+}:
+            x-amazon-apigateway-any-method:
+              responses: {}
+              x-amazon-apigateway-integration:
+                uri:
+                  !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SinatraFunction.Arn}/invocations'
+                passthroughBehavior: "when_no_match"
+                httpMethod: POST
+                type: "aws_proxy"
+          /:
+            get:
+              responses: {}
+              x-amazon-apigateway-integration:
+                uri:
+                  !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SinatraFunction.Arn}/invocations'
+                passthroughBehavior: "when_no_match"
+                httpMethod: POST
+                type: "aws_proxy"
+  ConfigLambdaPermission:
+    Type: "AWS::Lambda::Permission"
+    DependsOn:
+      - SinatraFunction
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref SinatraFunction
+      Principal: apigateway.amazonaws.com
+  RateDogsTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Ref DynamoDBTableName
+      PrimaryKey: 
+        Name: object_id
+        Type: String
+Outputs:
+  SinatraAppUrl:
+    Description: App endpoint URL
+    Value: !Sub "https://${SinatraAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
