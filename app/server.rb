@@ -5,7 +5,7 @@ require 'aws-sdk-s3'
 UPLOAD_BUCKET = Aws::S3::Resource.new.bucket(ENV["BucketName"])
 
 get "/" do
-  query = RateDogsTable.build_scan.limit(10).run! # reverse order?
+  query = RateDogsTable.build_scan.limit(10).run!
   @dogs = query.page
   erb :index
 end
